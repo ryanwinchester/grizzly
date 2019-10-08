@@ -375,7 +375,7 @@ defmodule Grizzly.Node do
     end
   end
 
-  defp do_get_command_class_version(zw_node, command_class_name) do
+  def do_get_command_class_version(zw_node, command_class_name) do
     task =
       Task.async(fn ->
         seq_number = SeqNumber.get_and_inc()
@@ -390,7 +390,7 @@ defmodule Grizzly.Node do
 
     try do
       # wait 5 secs
-      Task.await(task, 60_000)
+      Task.await(task)
     catch
       :exit, error ->
         # Task needs to be killed explicitly because we are trapping exits
