@@ -390,7 +390,7 @@ defmodule Grizzly.Node do
 
     try do
       # wait 5 secs
-      Task.await(task)
+      Task.await(task, 60_000)
     catch
       :exit, error ->
         # Task needs to be killed explicitly because we are trapping exits
