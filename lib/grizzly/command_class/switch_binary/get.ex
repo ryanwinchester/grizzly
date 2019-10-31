@@ -7,63 +7,28 @@ defmodule Grizzly.CommandClass.SwitchBinary.Get do
     * `:seq_number` - The sequence number for the Z/IP Packet
     * `:retries` - The number of times to resend the command (default 2)
   """
-  @behaviour Grizzly.Command
+  @behaviour Grizzly.CommandNG.Command
 
   alias Grizzly.Packet
-  alias Grizzly.CommandClass.SwitchBinary
+  alias ZWave.SwitchBinaryGet
 
-  @type t :: %__MODULE__{
-          seq_number: Grizzly.seq_number(),
-          retries: non_neg_integer()
-        }
-
-  @type opt :: {:seq_number, Grizzly.seq_number()} | {:retries, non_neg_integer()}
-
-  defstruct seq_number: nil, retries: 2
-
-  @spec init([opt]) :: {:ok, t}
-  def init(opts) do
-    {:ok, struct(__MODULE__, opts)}
+  @spec init(any) :: {:ok, SwitchBinaryGet.t(), map()}
+  def init(_) do
+    {:ok, %SwitchBinaryGet{}, %{}}
   end
 
-  @spec encode(t) :: {:ok, binary}
-  def encode(%__MODULE__{seq_number: seq_number}) do
-    binary = Packet.header(seq_number) <> <<0x25, 0x02>>
-    {:ok, binary}
-  end
+  @spec handle_ack(map()) :: {:continue, map()}
+  def handle_ack(state), do: {:continue, state}
 
-  @spec handle_response(t, Packet.t()) ::
-          {:continue, t}
-          | {:done, {:error, :nack_response}}
-          | {:done, SwitchBinary.switch_state()}
-          | {:retry, t}
-  def handle_response(%__MODULE__{seq_number: seq_number} = command, %Packet{
-        seq_number: seq_number,
-        types: [:ack_response]
-      }) do
-    {:continue, command}
-  end
+  @spec handle_command(Packet.t(), SwitchBinaryGet.t(), map()) :: {:done, {:ok, :on | :off}}
+  def handle_command(
+        %Packet{
+          body: %{command_class: :switch_binary, command: :report, value: switch_state}
+        },
+        _get_command,
+        _state
+      ),
+      do: {:done, {:ok, switch_state}}
 
-  def handle_response(%__MODULE__{seq_number: seq_number, retries: 0}, %Packet{
-        seq_number: seq_number,
-        types: [:nack_response]
-      }) do
-    {:done, {:error, :nack_response}}
-  end
-
-  def handle_response(%__MODULE__{seq_number: seq_number, retries: n} = command, %Packet{
-        seq_number: seq_number,
-        types: [:nack_response]
-      }) do
-    {:retry, %{command | retries: n - 1}}
-  end
-
-  def handle_response(
-        _,
-        %Packet{body: %{command_class: :switch_binary, command: :report, value: switch_state}}
-      ) do
-    {:done, {:ok, switch_state}}
-  end
-
-  def handle_response(command, _), do: {:continue, command}
+  def handle_command(_), do: {:continue, %{}}
 end

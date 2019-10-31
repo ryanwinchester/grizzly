@@ -60,7 +60,7 @@ defmodule Grizzly do
   """
   @type connected :: Conn.t() | Controller | Node.t()
 
-  @conn_opts [:owner]
+  @conn_opts [:owner, :command_module]
 
   @spec config() :: Config.t()
   def config() do
@@ -93,9 +93,11 @@ defmodule Grizzly do
   def send_command(%Conn{} = conn, command_module, opts) do
     # an option in opts is either a command or connection option
     command_opts = Keyword.drop(opts, @conn_opts)
+
+    command_runner = Keyword.get(opts, :command_module, Command)
     conn_opts = opts -- command_opts
 
-    with {:ok, command} <- Command.start(command_module, command_opts) do
+    with {:ok, command} <- command_runner.start(command_module, command_opts) do
       Conn.send_command(conn, command, conn_opts)
     else
       {:error, reason} ->
